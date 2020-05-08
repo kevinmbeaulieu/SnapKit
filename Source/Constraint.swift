@@ -32,7 +32,7 @@ public final class Constraint {
     internal let sourceLocation: (String, UInt)
     internal let label: String?
 
-    private let from: ConstraintItem
+    internal let from: ConstraintItem
     private let to: ConstraintItem
     private let relation: ConstraintRelation
     private let multiplier: ConstraintMultiplierTarget

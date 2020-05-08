@@ -192,9 +192,7 @@ public class ConstraintMaker {
     
     internal static func makeConstraints(item: LayoutConstraintItem, closure: (_ make: ConstraintMaker) -> Void) {
         let constraints = prepareConstraints(item: item, closure: closure)
-        for constraint in constraints {
-            constraint.activateIfNeeded(updatingExisting: false)
-        }
+        activateConstraintsIfNeeded(item: item, constraints: constraints, updatingExisting: false)
     }
     
     internal static func remakeConstraints(item: LayoutConstraintItem, closure: (_ make: ConstraintMaker) -> Void) {
@@ -209,16 +207,37 @@ public class ConstraintMaker {
         }
         
         let constraints = prepareConstraints(item: item, closure: closure)
-        for constraint in constraints {
-            constraint.activateIfNeeded(updatingExisting: true)
-        }
+        activateConstraintsIfNeeded(item: item, constraints: constraints, updatingExisting: true)
     }
     
     internal static func removeConstraints(item: LayoutConstraintItem) {
-        let constraints = item.constraints
-        for constraint in constraints {
-            constraint.deactivateIfNeeded()
+        deactivateConstraintsIfNeeded(item: item, constraints: item.constraints)
+    }
+
+    internal static func activateConstraintsIfNeeded(item: LayoutConstraintItem, constraints: [Constraint], updatingExisting: Bool = false) {
+        let layoutConstraints = constraints.flatMap({ $0.layoutConstraints })
+        if updatingExisting {
+            let existingLayoutConstraints = item.constraints.flatMap({ $0.layoutConstraints })
+            for layoutConstraint in layoutConstraints {
+                let existingLayoutConstraint = existingLayoutConstraints.first(where: { $0 == layoutConstraint })
+                guard let updateLayoutConstraint = existingLayoutConstraint else {
+                    fatalError("Updated constraint could not find existing matching constraint to update: \(layoutConstraint)")
+                }
+
+                let updateLayoutAttribute = (updateLayoutConstraint.secondAttribute == .notAnAttribute)
+                    ? updateLayoutConstraint.firstAttribute
+                    : updateLayoutConstraint.secondAttribute
+                updateLayoutConstraint.constant = layoutConstraint.constant.constraintConstantTargetValueFor(layoutAttribute: updateLayoutAttribute)
+            }
+        } else {
+            NSLayoutConstraint.activate(layoutConstraints)
+            item.add(constraints: constraints)
         }
     }
-    
+
+    internal static func deactivateConstraintsIfNeeded(item: LayoutConstraintItem, constraints: [Constraint]) {
+        let layoutConstraints = constraints.flatMap({ $0.layoutConstraints })
+        NSLayoutConstraint.deactivate(layoutConstraints)
+        item.remove(constraints: constraints)
+    }
 }
